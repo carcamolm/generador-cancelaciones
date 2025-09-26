@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 from fpdf import FPDF
@@ -9,6 +10,10 @@ import os
 
 st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
 st.title("📄 Generador de Reportes de Cancelación")
+
+# Inicializar estado
+if "generado" not in st.session_state:
+    st.session_state["generado"] = False
 
 # 📘 Botón para descargar instructivo
 st.markdown("¿Primera vez usando la herramienta? Descarga el instructivo institucional aquí:")
@@ -121,8 +126,13 @@ if st.button("Generar documentos"):
                 mime="application/zip"
             )
 
-            # 🔄 Botón para reiniciar la app
-            st.markdown("---")
-            st.markdown("¿Deseas generar otra carga?")
-            if st.button("🔄 Nueva carga"):
-                st.experimental_rerun()
+            # Activar estado de generación
+            st.session_state["generado"] = True
+
+# 🔄 Botón para reiniciar la app
+if st.session_state["generado"]:
+    st.markdown("---")
+    st.markdown("¿Deseas generar otra carga?")
+    if st.button("🔄 Nueva carga"):
+        st.session_state["generado"] = False
+        st.experimental_rerun()
