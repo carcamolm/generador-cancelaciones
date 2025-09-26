@@ -10,13 +10,28 @@ import os
 st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
 st.title("📄 Generador de Reportes de Cancelación")
 
-# Separación visual clara
+# 📘 Botón para descargar instructivo
+st.markdown("¿Primera vez usando la herramienta? Descarga el instructivo institucional aquí:")
+try:
+    with open("instructivo_cancelaciones.pdf", "rb") as pdf_file:
+        st.download_button(
+            label="📘 Descargar instructivo en PDF",
+            data=pdf_file.read(),
+            file_name="Instructivo_Generador_Cancelaciones.pdf",
+            mime="application/pdf"
+        )
+except FileNotFoundError:
+    st.warning("⚠️ El instructivo no se encuentra en el repositorio.")
+
+# 📁 Carga de Excel
 st.subheader("📁 Paso 1: Cargar archivo Excel")
 excel_file = st.file_uploader("Archivo Excel (.xlsx)", type=["xlsx"])
 
+# 🖼️ Carga de imágenes
 st.subheader("🖼️ Paso 2: Cargar evidencias en imagen")
 uploaded_images = st.file_uploader("Imágenes (.png, .jpg)", type=["png", "jpg"], accept_multiple_files=True)
 
+# 🔄 Generación de documentos
 if st.button("Generar documentos"):
     if not excel_file or not uploaded_images:
         st.error("❗ Debes subir el Excel y al menos una imagen.")
@@ -90,7 +105,7 @@ if st.button("Generar documentos"):
                 pdf_general_bytes = pdf_general.output(dest='S').encode('latin1')
                 zip_file.writestr("documentos_pdf/reporte_general.pdf", pdf_general_bytes)
 
-            # Limpiar archivos temporales
+            # 🧹 Limpiar archivos temporales
             for path in temp_files:
                 try:
                     os.remove(path)
