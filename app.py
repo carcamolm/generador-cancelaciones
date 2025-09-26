@@ -17,7 +17,7 @@ uploaded_images = st.file_uploader("Sube las evidencias (imágenes)", type=["png
 
 if st.button("Generar documentos"):
     if not excel_file or not uploaded_images:
-        st.error(⚠️ Debes subir el Excel y al menos una imagen.")
+        st.error("❗ Debes subir el Excel y al menos una imagen.")
     else:
         df = pd.read_excel(excel_file)
         columnas_requeridas = {"Nombre", "Ficha", "Evidencia"}
@@ -43,7 +43,7 @@ if st.button("Generar documentos"):
                         evidencia_file = imagen_dict.get(evidencia_nombre)
 
                         if not evidencia_file:
-                            st.warning(f"⚠️ No se encontró la imagen: {evidencia_nombre}")
+                            st.warning(f"❗ No se encontró la imagen: {evidencia_nombre}")
                             continue
 
                         # Crear PDF individual
