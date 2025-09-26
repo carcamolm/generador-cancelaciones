@@ -11,7 +11,7 @@ st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
 st.title("📄 Generador de Reportes de Cancelación")
 
 # 📘 Botón para descargar instructivo
-st.markdown("¿Primera vez usando la herramienta? Descarga el instructivo institucional aquí:")
+st.markdown("¿Primera vez usando la herramienta? Descarga el instructivo Generador Reportes Cancelación aquí:")
 try:
     with open("instructivo_cancelaciones.pdf", "rb") as pdf_file:
         st.download_button(
