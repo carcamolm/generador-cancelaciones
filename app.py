@@ -4,6 +4,8 @@ from fpdf import FPDF
 from PIL import Image
 import io
 import zipfile
+import tempfile
+import os
 
 st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
 st.title("📄 Generador de Reportes de Cancelación")
@@ -15,7 +17,7 @@ uploaded_images = st.file_uploader("Sube las evidencias (imágenes)", type=["png
 
 if st.button("Generar documentos"):
     if not excel_file or not uploaded_images:
-        st.error("⚠️ Debes subir el Excel y al menos una imagen.")
+        st.error(⚠️ Debes subir el Excel y al menos una imagen.")
     else:
         df = pd.read_excel(excel_file)
         columnas_requeridas = {"Nombre", "Ficha", "Evidencia"}
@@ -26,6 +28,7 @@ if st.button("Generar documentos"):
             zip_buffer = io.BytesIO()
             resumen_general = ""
             total_aprendices = 0
+            temp_files = []
 
             with zipfile.ZipFile(zip_buffer, "w") as zip_file:
                 agrupado = df.groupby("Ficha")
@@ -51,12 +54,11 @@ if st.button("Generar documentos"):
                         pdf.cell(0, 10, f"APRENDIZ: {row['Nombre']}", ln=True)
                         pdf.cell(0, 10, "EVIDENCIA CORREO", ln=True)
 
-                        # Insertar imagen con nombre simulado
                         image = Image.open(evidencia_file)
-                        img_buffer = io.BytesIO()
-                        image.save(img_buffer, format="PNG")
-                        img_buffer.seek(0)
-                        pdf.image(img_buffer, x=10, y=40, w=100, name="evidencia.png")
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_img:
+                            image.save(tmp_img.name, format="PNG")
+                            pdf.image(tmp_img.name, x=10, y=40, w=100)
+                            temp_files.append(tmp_img.name)
 
                         pdf_output = io.BytesIO()
                         pdf.output(pdf_output)
@@ -72,9 +74,13 @@ if st.button("Generar documentos"):
                     zip_file.writestr(resumen_path, resumen_texto)
                     resumen_general += resumen_texto + "\n"
 
-                # Crear reporte general
+                # Crear reporte general con logo
                 pdf_general = FPDF()
                 pdf_general.add_page()
+                logo_path = "logo_sena.png"
+                if os.path.exists(logo_path):
+                    pdf_general.image(logo_path, x=10, y=8, w=30)
+                pdf_general.set_xy(0, 35)
                 pdf_general.set_font("Arial", "B", 14)
                 pdf_general.cell(0, 10, "Reporte General de Cancelaciones", ln=True, align="C")
                 pdf_general.set_font("Arial", "", 11)
@@ -87,6 +93,13 @@ if st.button("Generar documentos"):
                 pdf_general_output.seek(0)
 
                 zip_file.writestr("documentos_pdf/reporte_general.pdf", pdf_general_output.read())
+
+            # Limpiar archivos temporales
+            for path in temp_files:
+                try:
+                    os.remove(path)
+                except Exception:
+                    pass
 
             zip_buffer.seek(0)
             st.success("✅ Documentos generados correctamente.")
