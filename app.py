@@ -62,12 +62,9 @@ if st.button("Generar documentos"):
                             pdf.image(tmp_img.name, x=10, y=40, w=100)
                             temp_files.append(tmp_img.name)
 
-                        pdf_output = io.BytesIO()
-                        pdf.output(pdf_output)
-                        pdf_output.seek(0)
-
+                        pdf_bytes = pdf.output(dest='S').encode('latin1')
                         ruta_pdf = f"documentos_pdf/{ficha_str}/{ficha_str}_{nombre}.pdf"
-                        zip_file.writestr(ruta_pdf, pdf_output.read())
+                        zip_file.writestr(ruta_pdf, pdf_bytes)
 
                         resumen_texto += f"- {row['Nombre']}\n"
                         total_aprendices += 1
@@ -90,11 +87,8 @@ if st.button("Generar documentos"):
                 pdf_general.cell(0, 10, f"Total de fichas: {len(agrupado)}", ln=True)
                 pdf_general.cell(0, 10, f"Total de aprendices: {total_aprendices}", ln=True)
 
-                pdf_general_output = io.BytesIO()
-                pdf_general.output(pdf_general_output)
-                pdf_general_output.seek(0)
-
-                zip_file.writestr("documentos_pdf/reporte_general.pdf", pdf_general_output.read())
+                pdf_general_bytes = pdf_general.output(dest='S').encode('latin1')
+                zip_file.writestr("documentos_pdf/reporte_general.pdf", pdf_general_bytes)
 
             # Limpiar archivos temporales
             for path in temp_files:
