@@ -11,7 +11,7 @@ st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
 st.title("📄 Generador de Reportes de Cancelación")
 
 # 📘 Botón para descargar instructivo
-st.markdown("¿Primera vez usando la herramienta? Descarga el instructivo Generador Reportes Cancelación aquí:")
+st.markdown("¿Primera vez usando la herramienta? Descarga el instructivo institucional aquí:")
 try:
     with open("instructivo_cancelaciones.pdf", "rb") as pdf_file:
         st.download_button(
@@ -120,3 +120,9 @@ if st.button("Generar documentos"):
                 file_name="cancelaciones.zip",
                 mime="application/zip"
             )
+
+            # 🔄 Botón para reiniciar la app
+            st.markdown("---")
+            st.markdown("¿Deseas generar otra carga?")
+            if st.button("🔄 Nueva carga"):
+                st.experimental_rerun()
