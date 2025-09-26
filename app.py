@@ -10,10 +10,12 @@ import os
 st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
 st.title("📄 Generador de Reportes de Cancelación")
 
-# Subida de Excel
+# Separación visual clara
+st.subheader("📁 Paso 1: Cargar archivo Excel")
 excel_file = st.file_uploader("Archivo Excel (.xlsx)", type=["xlsx"])
-# Subida de imágenes
-uploaded_images = st.file_uploader("Sube las evidencias (imágenes)", type=["png", "jpg"], accept_multiple_files=True)
+
+st.subheader("🖼️ Paso 2: Cargar evidencias en imagen")
+uploaded_images = st.file_uploader("Imágenes (.png, .jpg)", type=["png", "jpg"], accept_multiple_files=True)
 
 if st.button("Generar documentos"):
     if not excel_file or not uploaded_images:
