@@ -22,7 +22,6 @@ if st.button("Generar documentos"):
         if not columnas_requeridas.issubset(df.columns):
             st.error("❌ El archivo Excel debe tener las columnas: Nombre, Ficha, Evidencia.")
         else:
-            # Crear diccionario de imágenes
             imagen_dict = {img.name: img for img in uploaded_images}
             zip_buffer = io.BytesIO()
             resumen_general = ""
@@ -52,12 +51,12 @@ if st.button("Generar documentos"):
                         pdf.cell(0, 10, f"APRENDIZ: {row['Nombre']}", ln=True)
                         pdf.cell(0, 10, "EVIDENCIA CORREO", ln=True)
 
-                        # Insertar imagen
+                        # Insertar imagen con nombre simulado
                         image = Image.open(evidencia_file)
                         img_buffer = io.BytesIO()
                         image.save(img_buffer, format="PNG")
                         img_buffer.seek(0)
-                        pdf.image(img_buffer, x=10, y=40, w=100)
+                        pdf.image(img_buffer, x=10, y=40, w=100, name="evidencia.png")
 
                         pdf_output = io.BytesIO()
                         pdf.output(pdf_output)
@@ -69,7 +68,6 @@ if st.button("Generar documentos"):
                         resumen_texto += f"- {row['Nombre']}\n"
                         total_aprendices += 1
 
-                    # Guardar resumen por ficha
                     resumen_path = f"documentos_pdf/{ficha_str}/resumen_ficha_{ficha_str}.txt"
                     zip_file.writestr(resumen_path, resumen_texto)
                     resumen_general += resumen_texto + "\n"
