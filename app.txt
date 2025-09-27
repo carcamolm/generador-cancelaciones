@@ -233,8 +233,7 @@ elif st.session_state.modulo_seleccionado == "aprendices":
                                         temp_files.append(temp_img_path)
                                     
                                     # Guardar PDF en ZIP
-                                    pdf_bytes = pdf.output(dest='S').encode('latin1')
-
+                                    pdf_bytes = bytes(pdf.output())
                                     ruta_pdf = f"documentos_pdf/Ficha_{ficha_str}/{ficha_str}_{nombre_archivo}.pdf"
                                     zip_file.writestr(ruta_pdf, pdf_bytes)
                                     
@@ -356,8 +355,7 @@ elif st.session_state.modulo_seleccionado == "fichas":
                                         temp_files.append(temp_img_path)
                                     
                                     # Guardar PDF en carpeta de ficha
-                                    pdf_bytes = pdf.output(dest='S').encode('latin1')
-
+                                    pdf_bytes = bytes(pdf.output())
                                     ruta_pdf = f"documentos_pdf/Ficha_{ficha_str}/{ficha_str}_{nombre_archivo}.pdf"
                                     zip_file.writestr(ruta_pdf, pdf_bytes)
                                 else:
