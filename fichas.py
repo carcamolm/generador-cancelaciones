@@ -60,7 +60,11 @@ def generar_por_ficha():
                     image = Image.open(evidencia_file)
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_img:
                         image.save(tmp_img.name, format="PNG")
-                        pdf.image(tmp_img.name, x=10, y=40, w=100)
+
+
+                        y_actual = pdf.get_y() + 5  # 5 mm de espacio después del texto
+                        pdf.image(tmp_img.name, x=10, y=y_actual, w=100)
+
                         temp_files.append(tmp_img.name)
 
                     nombre_archivo = f"EVIDENCIAS_DESERCIÓN_{nombre}_.pdf"
