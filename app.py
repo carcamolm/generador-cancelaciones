@@ -10,9 +10,9 @@ import os
 st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
 st.title("📄 Generador de Reportes de Cancelación")
 
-# 🔄 Control de reinicio visual
-if "reset_key" not in st.session_state:
-    st.session_state.reset_key = 0
+# 🔄 Control de reinicio visual usando claves dinámicas
+if "carga_id" not in st.session_state:
+    st.session_state.carga_id = 0
 
 # 📘 Botón para descargar instructivo
 st.markdown("¿Primera vez usando la herramienta? Descarga el instructivo institucional aquí:")
@@ -29,11 +29,11 @@ except FileNotFoundError:
 
 # 📁 Carga de Excel con clave dinámica
 st.subheader("📁 Paso 1: Cargar archivo Excel")
-excel_file = st.file_uploader("Archivo Excel (.xlsx)", type=["xlsx"], key=f"excel_{st.session_state.reset_key}")
+excel_file = st.file_uploader("Archivo Excel (.xlsx)", type=["xlsx"], key=f"excel_{st.session_state.carga_id}")
 
 # 🖼️ Carga de imágenes con clave dinámica
 st.subheader("🖼️ Paso 2: Cargar evidencias en imagen")
-uploaded_images = st.file_uploader("Imágenes (.png, .jpg)", type=["png", "jpg"], accept_multiple_files=True, key=f"images_{st.session_state.reset_key}")
+uploaded_images = st.file_uploader("Imágenes (.png, .jpg)", type=["png", "jpg"], accept_multiple_files=True, key=f"images_{st.session_state.carga_id}")
 
 # 🔄 Generación de documentos
 if st.button("Generar documentos"):
@@ -126,5 +126,5 @@ if st.button("Generar documentos"):
 st.markdown("---")
 st.markdown("¿Deseas generar una nueva carga?")
 if st.button("🔄 Nueva carga"):
-    st.session_state.reset_key += 1
-    st.experimental_rerun()
+    st.session_state.carga_id += 1
+    st.success("✅ Listo para una nueva carga. Vuelve a subir los archivos.")
