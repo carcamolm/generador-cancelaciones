@@ -94,7 +94,219 @@ def crear_pdf_individual(nombre, ficha, evidencia_file):
         st.error(f"Error creando PDF: {str(e)}")
         return None, None
 
-# Función para crear reporte consolidado usando ReportLab
+# Función para crear PDF individual por aprendiz (módulo fichas)
+def crear_pdf_aprendiz_ficha(nombre, ficha, evidencia_file):
+    """Crea un PDF individual para cada estudiante usando el formato específico para fichas"""
+    try:
+        # Crear buffer para el PDF
+        buffer = io.BytesIO()
+        
+        # Crear canvas
+        c = canvas.Canvas(buffer, pagesize=A4)
+        
+        # Información del estudiante
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(2*cm, 27*cm, f"FICHA: {str(ficha)}")
+        c.drawString(2*cm, 26.2*cm, f"APRENDIZ: {str(nombre)}")
+        
+        c.setFont("Helvetica", 12)
+        c.drawString(2*cm, 25.2*cm, "EVIDENCIA CORREO:")
+        
+        # Agregar imagen si es válida
+        temp_img_path = None
+        if evidencia_file and es_imagen_valida(evidencia_file):
+            try:
+                imagen = Image.open(evidencia_file)
+                
+                # Redimensionar imagen si es muy grande
+                max_width, max_height = 800, 600
+                if imagen.width > max_width or imagen.height > max_height:
+                    imagen.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+                
+                # Guardar imagen temporalmente
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_img:
+                    imagen.save(tmp_img.name, format="PNG")
+                    temp_img_path = tmp_img.name
+                    
+                    # Agregar imagen al PDF
+                    img = ImageReader(tmp_img.name)
+                    c.drawImage(img, 2*cm, 12*cm, width=16*cm, preserveAspectRatio=True, mask='auto')
+                    
+            except Exception as e:
+                c.drawString(2*cm, 24.5*cm, f"[Error al insertar imagen: {str(e)}]")
+        else:
+            c.drawString(2*cm, 24.5*cm, "[Imagen no encontrada o no válida]")
+        
+        c.showPage()
+        c.save()
+        buffer.seek(0)
+        
+        return buffer.getvalue(), temp_img_path
+        
+    except Exception as e:
+        st.error(f"Error creando PDF: {str(e)}")
+        return None, None
+
+# Función para crear reporte consolidado institucional (módulo fichas)
+def crear_reporte_consolidado_institucional(df, agrupado, logo_disponible=False):
+    """Crea el reporte consolidado institucional sin evidencias individuales"""
+    try:
+        # Crear buffer para el PDF
+        buffer = io.BytesIO()
+        
+        # Crear canvas
+        c = canvas.Canvas(buffer, pagesize=A4)
+        
+        # Título principal
+        c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(10.5*cm, 23.5*cm, "REPORTE CONSOLIDADO DE CANCELACIONES")
+        
+        # Logo institucional
+        if logo_disponible and os.path.exists("logo_sena.png"):
+            try:
+                logo = ImageReader("logo_sena.png")
+                c.drawImage(logo, 2*cm, 25.5*cm, width=4*cm, preserveAspectRatio=True, mask='auto')
+            except:
+                pass
+        
+        c.setFont("Helvetica", 12)
+        y = 20.5*cm
+        resumen_fichas = {}
+        total_general = 0
+        
+        # Información por ficha
+        for ficha, grupo in agrupado:
+            # Verificar si necesitamos nueva página
+            if y < 6*cm:
+                c.showPage()
+                y = 27*cm
+            
+            c.drawString(2*cm, y, f"📌 FICHA: {str(ficha)}")
+            y -= 0.6*cm
+            c.drawString(2*cm, y, "APRENDICES:")
+            y -= 0.5*cm
+            
+            for _, row in grupo.iterrows():
+                if y < 4*cm:
+                    c.showPage()
+                    y = 27*cm
+                c.drawString(2.5*cm, y, f"- {str(row['Nombre'])}")
+                y -= 0.4*cm
+            
+            cantidad = len(grupo)
+            resumen_fichas[ficha] = cantidad
+            total_general += cantidad
+            y -= 0.8*cm
+        
+        # Resumen final en nueva página
+        c.showPage()
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(2*cm, 27*cm, "📊 RESUMEN FINAL POR FICHA")
+        c.setFont("Helvetica", 12)
+        y = 26*cm
+        
+        for ficha, cantidad in resumen_fichas.items():
+            c.drawString(2*cm, y, f"Ficha {str(ficha)}: {cantidad} aprendices")
+            y -= 0.5*cm
+        
+        c.drawString(2*cm, y - 0.5*cm, f"🧮 TOTAL GENERAL: {total_general} aprendices")
+        c.save()
+        
+        buffer.seek(0)
+        return buffer.getvalue()
+        
+    except Exception as e:
+        st.error(f"Error creando reporte consolidado institucional: {str(e)}")
+        return None
+    """Crea el reporte consolidado institucional usando ReportLab"""
+    try:
+        # Crear buffer para el PDF
+        buffer = io.BytesIO()
+        
+        # Crear canvas
+        p = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+        y_position = height - 50
+        
+        # Logo si está disponible
+        if logo_disponible and os.path.exists("logo_sena.png"):
+            try:
+                logo_reader = ImageReader("logo_sena.png")
+                p.drawImage(logo_reader, 50, y_position - 60, width=80, height=60)
+                y_position -= 80
+            except:
+                y_position -= 20
+        else:
+            y_position -= 20
+        
+        # Título principal
+        p.setFont("Helvetica-Bold", 18)
+        title = "REPORTE CONSOLIDADO DE CANCELACIONES"
+        title_width = p.stringWidth(title, "Helvetica-Bold", 18)
+        p.drawString((width - title_width) / 2, y_position, title)
+        y_position -= 40
+        
+        # Fecha del reporte
+        fecha_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
+        p.setFont("Helvetica", 12)
+        p.drawString(50, y_position, f"Fecha de generación: {fecha_actual}")
+        y_position -= 30
+        
+        # Información por ficha
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y_position, "DETALLE POR FICHAS:")
+        y_position -= 25
+        
+        total_aprendices = 0
+        
+        for ficha, grupo in agrupado:
+            # Verificar si necesitamos nueva página
+            if y_position < 100:
+                p.showPage()
+                y_position = height - 50
+            
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(50, y_position, f"FICHA: {str(ficha)}")
+            y_position -= 20
+            
+            p.setFont("Helvetica", 10)
+            p.drawString(70, y_position, f"Cantidad de aprendices: {len(grupo)}")
+            y_position -= 15
+            
+            p.drawString(70, y_position, "Aprendices:")
+            y_position -= 12
+            
+            for _, row in grupo.iterrows():
+                if y_position < 50:
+                    p.showPage()
+                    y_position = height - 50
+                
+                p.setFont("Helvetica", 9)
+                p.drawString(90, y_position, f"- {str(row['Nombre'])}")
+                y_position -= 12
+            
+            y_position -= 10
+            total_aprendices += len(grupo)
+        
+        # Resumen final
+        if y_position < 100:
+            p.showPage()
+            y_position = height - 50
+            
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y_position, "RESUMEN GENERAL:")
+        y_position -= 25
+        
+        p.setFont("Helvetica", 12)
+        p.drawString(50, y_position, f"Total de fichas procesadas: {len(agrupado)}")
+        y_position -= 20
+        p.drawString(50, y_position, f"Total de aprendices: {total_aprendices}")
+        
+        # Finalizar el PDF
+        p.save()
+        buffer.seek(0)
+        
+# Función para crear reporte consolidado usando ReportLab (módulo aprendices)
 def crear_reporte_consolidado(df, agrupado, logo_disponible=False):
     """Crea el reporte consolidado institucional usando ReportLab"""
     try:
@@ -416,21 +628,21 @@ elif st.session_state.modulo_seleccionado == "fichas":
                                 status_text.text(f"Procesando: {str(nombre)[:30]}... (Ficha {ficha_str})")
                                 
                                 if evidencia_file:
-                                    pdf_bytes, temp_img_path = crear_pdf_individual(nombre, ficha_str, evidencia_file)
+                                    pdf_bytes, temp_img_path = crear_pdf_aprendiz_ficha(nombre, ficha_str, evidencia_file)
                                     
                                     if pdf_bytes is not None:
                                         if temp_img_path:
                                             temp_files.append(temp_img_path)
                                         
                                         # Guardar PDF en carpeta de ficha
-                                        ruta_pdf = f"documentos_pdf/Ficha_{ficha_str}/{ficha_str}_{nombre_archivo}.pdf"
+                                        ruta_pdf = f"documentos_pdf/{ficha_str}/{ficha_str}_{nombre_archivo}.pdf"
                                         zip_file.writestr(ruta_pdf, pdf_bytes)
                                 else:
                                     st.warning(f"❗ No se encontró la imagen: {evidencia_nombre} para {str(nombre)}")
                         
                         # Crear reporte consolidado institucional
                         status_text.text("Generando reporte consolidado institucional...")
-                        pdf_consolidado_bytes = crear_reporte_consolidado(df, agrupado, True)
+                        pdf_consolidado_bytes = crear_reporte_consolidado_institucional(df, agrupado, True)
                         
                         if pdf_consolidado_bytes is not None:
                             zip_file.writestr("REPORTE_CONSOLIDADO_INSTITUCIONAL.pdf", pdf_consolidado_bytes)
