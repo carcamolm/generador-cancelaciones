@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
-from fpdf import FPDF
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
+from reportlab.lib.units import inch
 from PIL import Image
 from datetime import datetime
 import io
@@ -10,18 +13,6 @@ import os
 
 # Configurar la página
 st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
-
-# Clase PDF personalizada con codificación UTF-8
-class PDF_UTF8(FPDF):
-    def __init__(self):
-        super().__init__()
-        self.set_auto_page_break(auto=True, margin=15)
-    
-    def header(self):
-        pass
-    
-    def footer(self):
-        pass
 
 # Inicializar navegación
 if "modulo_seleccionado" not in st.session_state:
@@ -37,114 +28,163 @@ def es_imagen_valida(imagen_file):
     except:
         return False
 
-# Función para crear PDF individual
+# Función para crear PDF individual usando ReportLab
 def crear_pdf_individual(nombre, ficha, evidencia_file):
-    """Crea un PDF individual para cada estudiante"""
+    """Crea un PDF individual para cada estudiante usando ReportLab"""
     try:
-        pdf = PDF_UTF8()
-        pdf.add_page()
+        # Crear buffer para el PDF
+        buffer = io.BytesIO()
         
-        # Usar fuente que soporte caracteres especiales
-        try:
-            pdf.set_font("Arial", size=14)
-        except:
-            pdf.set_font("Helvetica", size=14)
+        # Crear canvas
+        p = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
         
-        # Información del estudiante (codificar explícitamente)
-        ficha_texto = f"FICHA: {str(ficha)}"
-        nombre_texto = f"APRENDIZ: {str(nombre)}"
+        # Información del estudiante
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(50, height - 50, f"FICHA: {str(ficha)}")
         
-        pdf.cell(0, 10, ficha_texto.encode('latin-1', 'ignore').decode('latin-1'), ln=True)
-        pdf.cell(0, 10, nombre_texto.encode('latin-1', 'ignore').decode('latin-1'), ln=True)
-        pdf.ln(5)
-        pdf.cell(0, 10, "EVIDENCIA CORREO", ln=True)
-        pdf.ln(10)
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, height - 80, f"APRENDIZ: {str(nombre)}")
+        
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(50, height - 110, "EVIDENCIA CORREO")
         
         # Agregar imagen si es válida
         temp_img_path = None
         if evidencia_file and es_imagen_valida(evidencia_file):
             try:
                 imagen = Image.open(evidencia_file)
+                
                 # Redimensionar imagen si es muy grande
-                max_width, max_height = 800, 600
+                max_width, max_height = 500, 400
                 if imagen.width > max_width or imagen.height > max_height:
                     imagen.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
                 
                 # Guardar imagen temporalmente
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_img:
                     imagen.save(tmp_img.name, format="PNG")
-                    pdf.image(tmp_img.name, x=10, y=50, w=120)
                     temp_img_path = tmp_img.name
+                    
+                    # Agregar imagen al PDF
+                    img_reader = ImageReader(tmp_img.name)
+                    img_width, img_height = imagen.size
+                    
+                    # Calcular posición y tamaño en el PDF
+                    scale = min(400/img_width, 300/img_height, 1.0)
+                    final_width = img_width * scale
+                    final_height = img_height * scale
+                    
+                    p.drawImage(img_reader, 50, height - 150 - final_height, 
+                              width=final_width, height=final_height)
+                    
             except Exception as e:
-                pdf.cell(0, 10, f"[Error al cargar imagen: {str(e)}]", ln=True)
+                p.setFont("Helvetica", 10)
+                p.drawString(50, height - 140, f"[Error al cargar imagen: {str(e)}]")
         else:
-            pdf.cell(0, 10, "[Imagen no valida o no encontrada]", ln=True)
+            p.setFont("Helvetica", 10)
+            p.drawString(50, height - 140, "[Imagen no válida o no encontrada]")
         
-        return pdf, temp_img_path
+        # Finalizar el PDF
+        p.save()
+        buffer.seek(0)
+        
+        return buffer.getvalue(), temp_img_path
         
     except Exception as e:
         st.error(f"Error creando PDF: {str(e)}")
         return None, None
 
-# Función para crear reporte consolidado
+# Función para crear reporte consolidado usando ReportLab
 def crear_reporte_consolidado(df, agrupado, logo_disponible=False):
-    """Crea el reporte consolidado institucional"""
+    """Crea el reporte consolidado institucional usando ReportLab"""
     try:
-        pdf = PDF_UTF8()
-        pdf.add_page()
+        # Crear buffer para el PDF
+        buffer = io.BytesIO()
+        
+        # Crear canvas
+        p = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+        y_position = height - 50
         
         # Logo si está disponible
         if logo_disponible and os.path.exists("logo_sena.png"):
             try:
-                pdf.image("logo_sena.png", x=10, y=8, w=30)
-                pdf.ln(35)
+                logo_reader = ImageReader("logo_sena.png")
+                p.drawImage(logo_reader, 50, y_position - 60, width=80, height=60)
+                y_position -= 80
             except:
-                pdf.ln(10)
+                y_position -= 20
         else:
-            pdf.ln(10)
+            y_position -= 20
         
         # Título principal
-        pdf.set_font("Arial", "B", 16)
-        pdf.cell(0, 10, "REPORTE CONSOLIDADO DE CANCELACIONES", ln=True, align="C")
-        pdf.ln(10)
+        p.setFont("Helvetica-Bold", 18)
+        title = "REPORTE CONSOLIDADO DE CANCELACIONES"
+        title_width = p.stringWidth(title, "Helvetica-Bold", 18)
+        p.drawString((width - title_width) / 2, y_position, title)
+        y_position -= 40
         
         # Fecha del reporte
         fecha_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
-        pdf.set_font("Arial", "", 10)
-        pdf.cell(0, 8, f"Fecha de generacion: {fecha_actual}", ln=True)
-        pdf.ln(5)
+        p.setFont("Helvetica", 12)
+        p.drawString(50, y_position, f"Fecha de generación: {fecha_actual}")
+        y_position -= 30
         
         # Información por ficha
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, "DETALLE POR FICHAS:", ln=True)
-        pdf.ln(5)
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y_position, "DETALLE POR FICHAS:")
+        y_position -= 25
         
         total_aprendices = 0
         
         for ficha, grupo in agrupado:
-            ficha_texto = f"FICHA: {str(ficha)}"
-            pdf.set_font("Arial", "B", 11)
-            pdf.cell(0, 8, ficha_texto.encode('latin-1', 'ignore').decode('latin-1'), ln=True)
+            # Verificar si necesitamos nueva página
+            if y_position < 100:
+                p.showPage()
+                y_position = height - 50
             
-            pdf.set_font("Arial", "", 10)
-            pdf.cell(0, 6, f"Cantidad de aprendices: {len(grupo)}", ln=True)
-            pdf.cell(0, 6, "Aprendices:", ln=True)
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(50, y_position, f"FICHA: {str(ficha)}")
+            y_position -= 20
+            
+            p.setFont("Helvetica", 10)
+            p.drawString(70, y_position, f"Cantidad de aprendices: {len(grupo)}")
+            y_position -= 15
+            
+            p.drawString(70, y_position, "Aprendices:")
+            y_position -= 12
             
             for _, row in grupo.iterrows():
-                nombre_texto = f"  - {str(row['Nombre'])}"
-                pdf.cell(0, 5, nombre_texto.encode('latin-1', 'ignore').decode('latin-1'), ln=True)
+                if y_position < 50:
+                    p.showPage()
+                    y_position = height - 50
+                
+                p.setFont("Helvetica", 9)
+                p.drawString(90, y_position, f"- {str(row['Nombre'])}")
+                y_position -= 12
             
-            pdf.ln(3)
+            y_position -= 10
             total_aprendices += len(grupo)
         
         # Resumen final
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, "RESUMEN GENERAL:", ln=True)
-        pdf.set_font("Arial", "", 11)
-        pdf.cell(0, 8, f"Total de fichas procesadas: {len(agrupado)}", ln=True)
-        pdf.cell(0, 8, f"Total de aprendices: {total_aprendices}", ln=True)
+        if y_position < 100:
+            p.showPage()
+            y_position = height - 50
+            
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y_position, "RESUMEN GENERAL:")
+        y_position -= 25
         
-        return pdf
+        p.setFont("Helvetica", 12)
+        p.drawString(50, y_position, f"Total de fichas procesadas: {len(agrupado)}")
+        y_position -= 20
+        p.drawString(50, y_position, f"Total de aprendices: {total_aprendices}")
+        
+        # Finalizar el PDF
+        p.save()
+        buffer.seek(0)
+        
+        return buffer.getvalue()
         
     except Exception as e:
         st.error(f"Error creando reporte consolidado: {str(e)}")
@@ -231,7 +271,7 @@ elif st.session_state.modulo_seleccionado == "aprendices":
                                 # Crear nombre de archivo seguro
                                 nombre_archivo = str(nombre).replace(" ", "_").replace("/", "_").replace("\\", "_")
                                 # Remover caracteres problemáticos para nombres de archivo
-                                caracteres_problematicos = '<>:"/\\|?*'
+                                caracteres_problematicos = '<>:"/\\|?*áéíóúñüÁÉÍÓÚÑÜ'
                                 for char in caracteres_problematicos:
                                     nombre_archivo = nombre_archivo.replace(char, "_")
                                 
@@ -244,27 +284,17 @@ elif st.session_state.modulo_seleccionado == "aprendices":
                                 status_text.text(f"Procesando: {str(nombre)[:30]}... (Ficha {ficha_str})")
                                 
                                 if evidencia_file:
-                                    pdf, temp_img_path = crear_pdf_individual(nombre, ficha_str, evidencia_file)
+                                    pdf_bytes, temp_img_path = crear_pdf_individual(nombre, ficha_str, evidencia_file)
                                     
-                                    if pdf is not None:
+                                    if pdf_bytes is not None:
                                         if temp_img_path:
                                             temp_files.append(temp_img_path)
                                         
-                                        # Guardar PDF en ZIP con manejo de errores
-                                        try:
-                                            pdf_output = pdf.output()
-                                            if isinstance(pdf_output, str):
-                                                pdf_bytes = pdf_output.encode('latin-1')
-                                            else:
-                                                pdf_bytes = pdf_output
-                                            
-                                            ruta_pdf = f"documentos_pdf/Ficha_{ficha_str}/{ficha_str}_{nombre_archivo}.pdf"
-                                            zip_file.writestr(ruta_pdf, pdf_bytes)
-                                            
-                                            resumen_texto += f"- {str(nombre)} OK\n"
-                                        except Exception as e:
-                                            st.warning(f"Error al guardar PDF para {nombre}: {str(e)}")
-                                            resumen_texto += f"- {str(nombre)} (Error PDF)\n"
+                                        # Guardar PDF en ZIP
+                                        ruta_pdf = f"documentos_pdf/Ficha_{ficha_str}/{ficha_str}_{nombre_archivo}.pdf"
+                                        zip_file.writestr(ruta_pdf, pdf_bytes)
+                                        
+                                        resumen_texto += f"- {str(nombre)} OK\n"
                                     else:
                                         resumen_texto += f"- {str(nombre)} (Error creacion PDF)\n"
                                 else:
@@ -273,23 +303,14 @@ elif st.session_state.modulo_seleccionado == "aprendices":
                             
                             # Guardar resumen de ficha
                             resumen_path = f"documentos_pdf/Ficha_{ficha_str}/resumen_ficha_{ficha_str}.txt"
-                            zip_file.writestr(resumen_path, resumen_texto)
+                            zip_file.writestr(resumen_path, resumen_texto.encode('utf-8'))
                         
                         # Crear reporte consolidado
                         status_text.text("Generando reporte consolidado...")
-                        pdf_general = crear_reporte_consolidado(df, agrupado, True)
+                        pdf_general_bytes = crear_reporte_consolidado(df, agrupado, True)
                         
-                        if pdf_general is not None:
-                            try:
-                                pdf_general_output = pdf_general.output()
-                                if isinstance(pdf_general_output, str):
-                                    pdf_general_bytes = pdf_general_output.encode('latin-1')
-                                else:
-                                    pdf_general_bytes = pdf_general_output
-                                
-                                zip_file.writestr("documentos_pdf/REPORTE_CONSOLIDADO.pdf", pdf_general_bytes)
-                            except Exception as e:
-                                st.warning(f"Error al crear reporte consolidado: {str(e)}")
+                        if pdf_general_bytes is not None:
+                            zip_file.writestr("documentos_pdf/REPORTE_CONSOLIDADO.pdf", pdf_general_bytes)
                         else:
                             st.warning("No se pudo crear el reporte consolidado")
                     
@@ -382,7 +403,7 @@ elif st.session_state.modulo_seleccionado == "fichas":
                                 # Crear nombre de archivo seguro
                                 nombre_archivo = str(nombre).replace(" ", "_").replace("/", "_").replace("\\", "_")
                                 # Remover caracteres problemáticos para nombres de archivo
-                                caracteres_problematicos = '<>:"/\\|?*'
+                                caracteres_problematicos = '<>:"/\\|?*áéíóúñüÁÉÍÓÚÑÜ'
                                 for char in caracteres_problematicos:
                                     nombre_archivo = nombre_archivo.replace(char, "_")
                                 
@@ -395,42 +416,24 @@ elif st.session_state.modulo_seleccionado == "fichas":
                                 status_text.text(f"Procesando: {str(nombre)[:30]}... (Ficha {ficha_str})")
                                 
                                 if evidencia_file:
-                                    pdf, temp_img_path = crear_pdf_individual(nombre, ficha_str, evidencia_file)
+                                    pdf_bytes, temp_img_path = crear_pdf_individual(nombre, ficha_str, evidencia_file)
                                     
-                                    if pdf is not None:
+                                    if pdf_bytes is not None:
                                         if temp_img_path:
                                             temp_files.append(temp_img_path)
                                         
                                         # Guardar PDF en carpeta de ficha
-                                        try:
-                                            pdf_output = pdf.output()
-                                            if isinstance(pdf_output, str):
-                                                pdf_bytes = pdf_output.encode('latin-1')
-                                            else:
-                                                pdf_bytes = pdf_output
-                                            
-                                            ruta_pdf = f"documentos_pdf/Ficha_{ficha_str}/{ficha_str}_{nombre_archivo}.pdf"
-                                            zip_file.writestr(ruta_pdf, pdf_bytes)
-                                        except Exception as e:
-                                            st.warning(f"Error al guardar PDF para {nombre}: {str(e)}")
+                                        ruta_pdf = f"documentos_pdf/Ficha_{ficha_str}/{ficha_str}_{nombre_archivo}.pdf"
+                                        zip_file.writestr(ruta_pdf, pdf_bytes)
                                 else:
                                     st.warning(f"❗ No se encontró la imagen: {evidencia_nombre} para {str(nombre)}")
                         
                         # Crear reporte consolidado institucional
                         status_text.text("Generando reporte consolidado institucional...")
-                        pdf_consolidado = crear_reporte_consolidado(df, agrupado, True)
+                        pdf_consolidado_bytes = crear_reporte_consolidado(df, agrupado, True)
                         
-                        if pdf_consolidado is not None:
-                            try:
-                                pdf_consolidado_output = pdf_consolidado.output()
-                                if isinstance(pdf_consolidado_output, str):
-                                    pdf_consolidado_bytes = pdf_consolidado_output.encode('latin-1')
-                                else:
-                                    pdf_consolidado_bytes = pdf_consolidado_output
-                                
-                                zip_file.writestr("REPORTE_CONSOLIDADO_INSTITUCIONAL.pdf", pdf_consolidado_bytes)
-                            except Exception as e:
-                                st.warning(f"Error al crear reporte consolidado institucional: {str(e)}")
+                        if pdf_consolidado_bytes is not None:
+                            zip_file.writestr("REPORTE_CONSOLIDADO_INSTITUCIONAL.pdf", pdf_consolidado_bytes)
                         else:
                             st.warning("No se pudo crear el reporte consolidado institucional")
                     
