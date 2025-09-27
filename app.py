@@ -24,6 +24,22 @@ def es_imagen_valida(imagen_file):
     except:
         return False
 
+# Función para limpiar texto para PDF
+def limpiar_texto_pdf(texto):
+    """Limpia el texto para evitar problemas de codificación en PDF"""
+    # Reemplazar caracteres problemáticos
+    replacements = {
+        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+        'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
+        'ñ': 'n', 'Ñ': 'N', 'ü': 'u', 'Ü': 'U'
+    }
+    
+    for old, new in replacements.items():
+        texto = texto.replace(old, new)
+    
+    # Mantener solo caracteres ASCII seguros
+    return ''.join(char for char in texto if ord(char) < 128)
+
 # Función para crear PDF individual
 def crear_pdf_individual(nombre, ficha, evidencia_file):
     """Crea un PDF individual para cada estudiante"""
@@ -31,9 +47,13 @@ def crear_pdf_individual(nombre, ficha, evidencia_file):
     pdf.add_page()
     pdf.set_font("Arial", size=14)
     
+    # Limpiar textos
+    nombre_limpio = limpiar_texto_pdf(nombre)
+    ficha_limpio = limpiar_texto_pdf(str(ficha))
+    
     # Información del estudiante
-    pdf.cell(0, 10, f"FICHA: {ficha}", ln=True)
-    pdf.cell(0, 10, f"APRENDIZ: {nombre}", ln=True)
+    pdf.cell(0, 10, f"FICHA: {ficha_limpio}", ln=True)
+    pdf.cell(0, 10, f"APRENDIZ: {nombre_limpio}", ln=True)
     pdf.ln(5)
     pdf.cell(0, 10, "EVIDENCIA CORREO", ln=True)
     pdf.ln(10)
@@ -94,15 +114,17 @@ def crear_reporte_consolidado(df, agrupado, logo_disponible=False):
     total_aprendices = 0
     
     for ficha, grupo in agrupado:
+        ficha_limpio = limpiar_texto_pdf(str(ficha))
         pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 8, f"FICHA: {ficha}", ln=True)
+        pdf.cell(0, 8, f"FICHA: {ficha_limpio}", ln=True)
         
         pdf.set_font("Arial", "", 10)
         pdf.cell(0, 6, f"Cantidad de aprendices: {len(grupo)}", ln=True)
         pdf.cell(0, 6, "Aprendices:", ln=True)
         
         for _, row in grupo.iterrows():
-            pdf.cell(0, 5, f"  - {row['Nombre']}", ln=True)
+            nombre_limpio = limpiar_texto_pdf(row['Nombre'])
+            pdf.cell(0, 5, f"  - {nombre_limpio}", ln=True)
         
         pdf.ln(3)
         total_aprendices += len(grupo)
@@ -194,14 +216,15 @@ elif st.session_state.modulo_seleccionado == "aprendices":
                             
                             for _, row in grupo.iterrows():
                                 nombre = row["Nombre"]
-                                nombre_archivo = nombre.replace(" ", "_").replace("/", "_")
+                                # Limpiar nombre para archivo y texto
+                                nombre_archivo = limpiar_texto_pdf(nombre).replace(" ", "_").replace("/", "_")
                                 evidencia_nombre = row["Evidencia"]
                                 evidencia_file = imagen_dict.get(evidencia_nombre)
                                 
                                 # Actualizar progreso
                                 total_procesados += 1
                                 progress_bar.progress(total_procesados / total_registros)
-                                status_text.text(f"Procesando: {nombre} (Ficha {ficha_str})")
+                                status_text.text(f"Procesando: {limpiar_texto_pdf(nombre)} (Ficha {ficha_str})")
                                 
                                 if evidencia_file:
                                     pdf, temp_img_path = crear_pdf_individual(nombre, ficha_str, evidencia_file)
@@ -214,10 +237,10 @@ elif st.session_state.modulo_seleccionado == "aprendices":
                                     ruta_pdf = f"documentos_pdf/Ficha_{ficha_str}/{ficha_str}_{nombre_archivo}.pdf"
                                     zip_file.writestr(ruta_pdf, pdf_bytes)
                                     
-                                    resumen_texto += f"- {nombre} ✓\n"
+                                    resumen_texto += f"- {limpiar_texto_pdf(nombre)} OK\n"
                                 else:
                                     st.warning(f"❗ No se encontró la imagen: {evidencia_nombre}")
-                                    resumen_texto += f"- {nombre} (Sin evidencia)\n"
+                                    resumen_texto += f"- {limpiar_texto_pdf(nombre)} (Sin evidencia)\n"
                             
                             # Guardar resumen de ficha
                             resumen_path = f"documentos_pdf/Ficha_{ficha_str}/resumen_ficha_{ficha_str}.txt"
@@ -315,14 +338,15 @@ elif st.session_state.modulo_seleccionado == "fichas":
                             
                             for _, row in grupo.iterrows():
                                 nombre = row["Nombre"]
-                                nombre_archivo = nombre.replace(" ", "_").replace("/", "_")
+                                # Limpiar nombre para archivo y texto
+                                nombre_archivo = limpiar_texto_pdf(nombre).replace(" ", "_").replace("/", "_")
                                 evidencia_nombre = row["Evidencia"]
                                 evidencia_file = imagen_dict.get(evidencia_nombre)
                                 
                                 # Actualizar progreso
                                 total_procesados += 1
                                 progress_bar.progress(total_procesados / total_registros)
-                                status_text.text(f"Procesando: {nombre} (Ficha {ficha_str})")
+                                status_text.text(f"Procesando: {limpiar_texto_pdf(nombre)} (Ficha {ficha_str})")
                                 
                                 if evidencia_file:
                                     pdf, temp_img_path = crear_pdf_individual(nombre, ficha_str, evidencia_file)
@@ -335,7 +359,7 @@ elif st.session_state.modulo_seleccionado == "fichas":
                                     ruta_pdf = f"documentos_pdf/Ficha_{ficha_str}/{ficha_str}_{nombre_archivo}.pdf"
                                     zip_file.writestr(ruta_pdf, pdf_bytes)
                                 else:
-                                    st.warning(f"❗ No se encontró la imagen: {evidencia_nombre} para {nombre}")
+                                    st.warning(f"❗ No se encontró la imagen: {evidencia_nombre} para {limpiar_texto_pdf(nombre)}")
                         
                         # Crear reporte consolidado institucional
                         status_text.text("Generando reporte consolidado institucional...")
