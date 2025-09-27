@@ -11,6 +11,27 @@ import zipfile
 import tempfile
 import os
 
+
+# Menú principal
+st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
+st.title("📄 Generador de Reportes de Cancelación")
+
+opcion = st.radio("Selecciona el módulo que deseas usar:", ["🏷️ EVIDENCIAS X APRENDICES", "📁 EVIDENCIA X FICHAS"])
+
+if opcion == "🏷️ EVIDENCIAS X APRENDICES":
+    st.markdown("### 🔍 Generación por aprendiz")
+    # Aquí colocas TODO el código que ya tienes funcionando con FPDF
+    # Puedes encapsularlo en una función como generar_por_aprendiz()
+
+elif opcion == "📁 EVIDENCIA X FICHAS":
+    st.markdown("### 📂 Generación por ficha con consolidado institucional")
+    # Aquí colocas el nuevo flujo con reportlab y portada
+    # Puedes encapsularlo en una función como generar_por_ficha()
+
+
+
+
+
 st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
 st.title("📄 Generador de Reportes de Cancelación")
 
