@@ -18,7 +18,7 @@ def limpiar_nombre(nombre):
 
 
 def generar_por_ficha():
-    st.title("📂 Generación por Ficha con Consolidado Institucional")
+    st.title("📂 Consolidado Aprendiz por Ficha")
 
     st.subheader("📁 Paso 1: Cargar archivo Excel")
     excel_file = st.file_uploader("Archivo Excel (.xlsx)", type=["xlsx"])

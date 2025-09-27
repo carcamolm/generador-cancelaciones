@@ -19,7 +19,7 @@ def limpiar_nombre(nombre):
 
 
 def generar_por_aprendiz():
-    st.title("🔍 Generación por Aprendiz")
+    st.title("🔍 Generación documentos individuales por Aprendiz")
 
     st.markdown("¿Primera vez usando la herramienta? Descarga el instructivo institucional aquí:")
     try:
