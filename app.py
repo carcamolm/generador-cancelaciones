@@ -10,13 +10,21 @@ import os
 st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
 st.title("📄 Generador de Reportes de Cancelación")
 
-# Inicializar estado
-if "excel_file" not in st.session_state:
-    st.session_state.excel_file = None
-if "uploaded_images" not in st.session_state:
-    st.session_state.uploaded_images = []
-if "zip_buffer" not in st.session_state:
-    st.session_state.zip_buffer = None
+# 🔄 Control de reinicio visual
+if "reset" not in st.session_state:
+    st.session_state.reset = False
+
+# 🔄 Botón para nueva carga (se muestra siempre)
+st.markdown("---")
+st.markdown("¿Deseas generar una nueva carga?")
+if st.button("🔄 Nueva carga"):
+    st.session_state.reset = True
+    st.experimental_rerun()
+
+# Si estamos en modo reinicio, no mostrar nada más
+if st.session_state.reset:
+    st.success("✅ Listo para una nueva carga. Vuelve a subir los archivos.")
+    st.stop()
 
 # 📘 Botón para descargar instructivo
 st.markdown("¿Primera vez usando la herramienta? Descarga el instructivo institucional aquí:")
@@ -28,32 +36,28 @@ try:
             file_name="Instructivo_Generador_Cancelaciones.pdf",
             mime="application/pdf"
         )
-except FileNotFoundError:
-    st.warning("⚠️ El instructivo no se encuentra en el repositorio.")
+    except FileNotFoundError:
+        st.warning("⚠️ El instructivo no se encuentra en el repositorio.")
 
 # 📁 Carga de Excel
 st.subheader("📁 Paso 1: Cargar archivo Excel")
-excel_input = st.file_uploader("Archivo Excel (.xlsx)", type=["xlsx"])
-if excel_input:
-    st.session_state.excel_file = excel_input
+excel_file = st.file_uploader("Archivo Excel (.xlsx)", type=["xlsx"])
 
 # 🖼️ Carga de imágenes
 st.subheader("🖼️ Paso 2: Cargar evidencias en imagen")
-images_input = st.file_uploader("Imágenes (.png, .jpg)", type=["png", "jpg"], accept_multiple_files=True)
-if images_input:
-    st.session_state.uploaded_images = images_input
+uploaded_images = st.file_uploader("Imágenes (.png, .jpg)", type=["png", "jpg"], accept_multiple_files=True)
 
 # 🔄 Generación de documentos
 if st.button("Generar documentos"):
-    if not st.session_state.excel_file or not st.session_state.uploaded_images:
+    if not excel_file or not uploaded_images:
         st.error("❗ Debes subir el Excel y al menos una imagen.")
     else:
-        df = pd.read_excel(st.session_state.excel_file)
+        df = pd.read_excel(excel_file)
         columnas_requeridas = {"Nombre", "Ficha", "Evidencia"}
         if not columnas_requeridas.issubset(df.columns):
             st.error("❌ El archivo Excel debe tener las columnas: Nombre, Ficha, Evidencia.")
         else:
-            imagen_dict = {img.name: img for img in st.session_state.uploaded_images}
+            imagen_dict = {img.name: img for img in uploaded_images}
             zip_buffer = io.BytesIO()
             resumen_general = ""
             total_aprendices = 0
@@ -122,23 +126,10 @@ if st.button("Generar documentos"):
                     pass
 
             zip_buffer.seek(0)
-            st.session_state.zip_buffer = zip_buffer
             st.success("✅ Documentos generados correctamente.")
-
-# 📥 Botón de descarga si ya se generó
-if st.session_state.zip_buffer:
-    st.download_button(
-        label="📥 Descargar carpeta ZIP con todos los documentos",
-        data=st.session_state.zip_buffer,
-        file_name="cancelaciones.zip",
-        mime="application/zip"
-    )
-
-# 🔄 Botón para nueva carga
-st.markdown("---")
-st.markdown("¿Deseas generar una nueva carga?")
-if st.button("🔄 Nueva carga"):
-    st.session_state.excel_file = None
-    st.session_state.uploaded_images = []
-    st.session_state.zip_buffer = None
-    st.success("✅ Listo para una nueva carga. Vuelve a subir los archivos.")
+            st.download_button(
+                label="📥 Descargar carpeta ZIP con todos los documentos",
+                data=zip_buffer,
+                file_name="cancelaciones.zip",
+                mime="application/zip"
+            )
