@@ -8,6 +8,15 @@ import io
 import zipfile
 import tempfile
 
+import unicodedata
+
+def limpiar_nombre(nombre):
+    nombre = unicodedata.normalize('NFKD', nombre)
+    nombre = nombre.encode('ASCII', 'ignore').decode('utf-8')
+    nombre = nombre.replace(" ", "_")
+    return nombre
+
+
 def generar_por_ficha():
     st.title("📂 Generación por Ficha con Consolidado Institucional")
 
@@ -42,7 +51,8 @@ def generar_por_ficha():
                 resumen_texto = f"Resumen de Ficha: {ficha_str}\nTotal de aprendices: {len(grupo)}\n\n"
 
                 for _, row in grupo.iterrows():
-                    nombre = row["Nombre"].replace(" ", "_")
+                    nombre = limpiar_nombre(row["Nombre"])
+
                     evidencia_nombre = row["Evidencia"]
                     evidencia_file = imagen_dict.get(evidencia_nombre)
 
