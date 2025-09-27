@@ -27,6 +27,14 @@ try:
 except FileNotFoundError:
     st.warning("⚠️ El instructivo no se encuentra en el repositorio.")
 
+# 🔄 Botón para nueva carga (movido al principio para mejor UX)
+st.markdown("---")
+col1, col2 = st.columns([3, 1])
+with col2:
+    if st.button("🔄 Nueva carga"):
+        st.session_state.carga_id += 1
+        st.rerun()  # Fuerza el refresco de la página
+
 # 📁 Carga de Excel con clave dinámica
 st.subheader("📁 Paso 1: Cargar archivo Excel")
 excel_file = st.file_uploader("Archivo Excel (.xlsx)", type=["xlsx"], key=f"excel_{st.session_state.carga_id}")
@@ -122,9 +130,10 @@ if st.button("Generar documentos", key=f"generar_{st.session_state.carga_id}"):
                 mime="application/zip"
             )
 
-# 🔄 Botón para nueva carga que cambia claves sin recargar
+# Información de estado actual
 st.markdown("---")
-st.markdown("¿Deseas generar una nueva carga?")
-if st.button("🔄 Nueva carga"):
-    st.session_state.carga_id += 1
-    st.markdown("✅ Listo para una nueva carga. Vuelve a subir los archivos.")
+st.caption(f"💡 **Estado actual:** Carga #{st.session_state.carga_id + 1}")
+if excel_file:
+    st.caption(f"📄 Archivo Excel: {excel_file.name}")
+if uploaded_images:
+    st.caption(f"🖼️ Imágenes: {len(uploaded_images)} archivo(s)")
