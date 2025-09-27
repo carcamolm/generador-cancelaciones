@@ -1,32 +1,37 @@
-\# Generador de Reportes de Cancelación
+# 🧾 Generador de Reportes de Cancelación
 
+Aplicación institucional desarrollada para automatizar la generación de reportes de cancelación por aprendiz y por ficha, integrando evidencias visuales y consolidado institucional en formato PDF. Diseñada para facilitar el trabajo de instructores, coordinadores y personal administrativo del SENA.
 
+---
 
-Esta app permite generar documentos Word y PDF por aprendiz, organizados por ficha, con un reporte general en PDF.
+## 🚀 ¿Qué hace esta app?
 
+- 📂 Permite cargar un archivo Excel con los datos de aprendices y fichas
+- 🖼️ Integra evidencias en imagen (.png, .jpg) por cada aprendiz
+- 🧾 Genera documentos PDF individuales por aprendiz con formato institucional
+- 📋 Crea reportes agrupados por ficha con portada y consolidado
+- 📦 Descarga final en formato ZIP con estructura organizada por carpeta
+- 📘 Incluye instructivo institucional descargable
 
+---
 
-\## Cómo usar
+## 🧩 Estructura modular
 
+La app está organizada en tres módulos principales:
 
+- `app.py` → Menú principal y navegación
+- `aprendices.py` → Generación por aprendiz (FPDF)
+- `fichas.py` → Generación por ficha (ReportLab)
 
-1\. Sube el archivo Excel con los aprendices.
+---
 
-2\. Especifica la ruta local de la carpeta con las imágenes.
+## 📁 Requisitos técnicos
 
-3\. Haz clic en "Generar documentos".
+Antes de ejecutar la app, asegúrate de tener instaladas las siguientes dependencias:
 
-4\. Descarga el reporte general en PDF.
-
-
-
-\## Requisitos
-
-
-
-\- El archivo Excel debe tener columnas: Nombre, Ficha, Evidencia.
-
-\- Las imágenes deben estar en la carpeta indicada.
-
-
-
+```bash
+streamlit
+fpdf
+reportlab
+pandas
+Pillow

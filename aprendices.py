@@ -1,107 +1,124 @@
+import streamlit as st
 import pandas as pd
-from docx import Document
-from docx.shared import Inches
-from docx2pdf import convert
 from fpdf import FPDF
-import os
+from PIL import Image
 from datetime import datetime
+import os
+import io
+import zipfile
+import tempfile
 
-def generar_documentos(excel_path, carpeta_imagenes):
-    carpeta_word = "documentos_word"
-    carpeta_pdf = "documentos_pdf"
-    archivo_reporte_general = "reporte_general.pdf"
-    logo_path = "logo_sena.png"
+def generar_por_aprendiz():
+    st.title("🔍 Generación por Aprendiz")
 
-    os.makedirs(carpeta_word, exist_ok=True)
-    os.makedirs(carpeta_pdf, exist_ok=True)
+    st.markdown("¿Primera vez usando la herramienta? Descarga el instructivo institucional aquí:")
+    try:
+        with open("instructivo_cancelaciones.pdf", "rb") as pdf_file:
+            st.download_button(
+                label="📘 Descargar instructivo en PDF",
+                data=pdf_file.read(),
+                file_name="Instructivo_Generador_Cancelaciones.pdf",
+                mime="application/pdf"
+            )
+    except FileNotFoundError:
+        st.warning("⚠️ El instructivo no se encuentra en el repositorio.")
 
-    df = pd.read_excel(excel_path)
+    st.subheader("📁 Paso 1: Cargar archivo Excel")
+    excel_file = st.file_uploader("Archivo Excel (.xlsx)", type=["xlsx"])
 
-    # Validar evidencias
-    faltantes = []
-    for index, row in df.iterrows():
-        evidencia = os.path.join(carpeta_imagenes, row["Evidencia"])
-        if not os.path.exists(evidencia):
-            faltantes.append(evidencia)
-        else:
-            df.at[index, "Evidencia"] = evidencia  # Actualiza ruta completa
+    st.subheader("🖼️ Paso 2: Cargar evidencias en imagen")
+    uploaded_images = st.file_uploader("Imágenes (.png, .jpg)", type=["png", "jpg"], accept_multiple_files=True)
 
-    if faltantes:
-        raise FileNotFoundError(f"Faltan evidencias: {faltantes}")
+    if st.button("Generar documentos"):
+        if not excel_file or not uploaded_images:
+            st.error("❗ Debes subir el Excel y al menos una imagen.")
+            return
 
-    # Generar documentos Word
-    # Generar documentos Word
-for index, row in df.iterrows():
-    nombre = row["Nombre"]
-    ficha = str(row["Ficha"])
-    evidencia = row["Evidencia"]
+        df = pd.read_excel(excel_file)
+        columnas_requeridas = {"Nombre", "Ficha", "Evidencia"}
+        if not columnas_requeridas.issubset(df.columns):
+            st.error("❌ El archivo Excel debe tener las columnas: Nombre, Ficha, Evidencia.")
+            return
 
-    subcarpeta_word = os.path.join(carpeta_word, ficha)
-    subcarpeta_pdf = os.path.join(carpeta_pdf, ficha)
-    os.makedirs(subcarpeta_word, exist_ok=True)
-    os.makedirs(subcarpeta_pdf, exist_ok=True)
+        imagen_dict = {img.name: img for img in uploaded_images}
+        zip_buffer = io.BytesIO()
+        resumen_general = ""
+        total_aprendices = 0
+        temp_files = []
 
-    nombre_archivo_base = f"EVIDENCIAS_DESERCIÓN_{nombre.replace(' ', '_')}_"
-    ruta_docx = os.path.join(subcarpeta_word, f"{nombre_archivo_base}.docx")
+        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+            agrupado = df.groupby("Ficha")
 
-    doc = Document()
-    doc.add_paragraph(f"FICHA: {ficha}")
-    doc.add_paragraph(f"APRENDIZ:  {nombre}")
-    doc.add_paragraph("EVIDENCIA CORREO")
-    doc.add_picture(evidencia, width=Inches(5))
-    doc.save(ruta_docx)
+            for ficha, grupo in agrupado:
+                ficha_str = str(ficha)
+                resumen_texto = f"Resumen de Ficha: {ficha_str}\nTotal de aprendices: {len(grupo)}\n\n"
 
-    # Convertir a PDF
-    for ficha in df["Ficha"].astype(str).unique():
-        subcarpeta_word = os.path.join(carpeta_word, ficha)
-        subcarpeta_pdf = os.path.join(carpeta_pdf, ficha)
-        convert(subcarpeta_word, subcarpeta_pdf)
+                for _, row in grupo.iterrows():
+                    nombre = row["Nombre"].replace(" ", "_")
+                    evidencia_nombre = row["Evidencia"]
+                    evidencia_file = imagen_dict.get(evidencia_nombre)
 
-    # Crear resumen por ficha
-    agrupado = df.groupby("Ficha")
-    for ficha, grupo in agrupado:
-        ficha_str = str(ficha)
-        subcarpeta_word = os.path.join(carpeta_word, ficha_str)
-        resumen_path = os.path.join(subcarpeta_word, f"resumen_ficha_{ficha_str}.txt")
-        with open(resumen_path, "w", encoding="utf-8") as resumen:
-            resumen.write(f"Resumen de Ficha: {ficha_str}\n")
-            resumen.write(f"Total de aprendices: {len(grupo)}\n\n")
-            for nombre in grupo["Nombre"]:
-                resumen.write(f"- {nombre}\n")
+                    if not evidencia_file:
+                        st.warning(f"❗ No se encontró la imagen: {evidencia_nombre}")
+                        continue
 
-    # Crear reporte general PDF
-    fecha_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
-    total_fichas = len(agrupado)
-    total_aprendices = len(df)
+                    pdf = FPDF()
+                    pdf.add_page()
+                    pdf.set_font("Arial", size=12)
+                    pdf.cell(0, 10, f"FICHA: {ficha_str}", ln=True)
+                    pdf.cell(0, 10, f"APRENDIZ: {row['Nombre']}", ln=True)
+                    pdf.cell(0, 10, "EVIDENCIA CORREO", ln=True)
 
-    pdf = FPDF()
-    pdf.add_page()
+                    image = Image.open(evidencia_file)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_img:
+                        image.save(tmp_img.name, format="PNG")
+                        pdf.image(tmp_img.name, x=10, y=40, w=100)
+                        temp_files.append(tmp_img.name)
 
-    if os.path.exists(logo_path):
-        pdf.image(logo_path, x=10, y=8, w=30)
-    pdf.set_xy(0, 35)
+                    nombre_archivo = f"EVIDENCIAS_DESERCIÓN_{nombre}_.pdf"
+                    ruta_pdf = f"documentos_pdf/Ficha_{ficha_str}/{nombre_archivo}"
+                    pdf_bytes = pdf.output(dest='S').encode('latin1')
+                    zip_file.writestr(ruta_pdf, pdf_bytes)
 
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Reporte de Aprendices enviados a cancelación por Formulario", ln=True, align="C")
-    pdf.set_font("Arial", "", 11)
-    pdf.cell(0, 10, f"Fecha de creación: {fecha_actual}", ln=True, align="C")
-    pdf.ln(10)
+                    resumen_texto += f"- {row['Nombre']}\n"
+                    total_aprendices += 1
 
-    for ficha, grupo in agrupado:
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, f"Ficha: {ficha}", ln=True)
-        pdf.set_font("Arial", "", 11)
-        for nombre in grupo["Nombre"]:
-            pdf.cell(0, 8, f"- {nombre}", ln=True)
-        pdf.ln(5)
+                resumen_path = f"documentos_pdf/Ficha_{ficha_str}/resumen_ficha_{ficha_str}.txt"
+                zip_file.writestr(resumen_path, resumen_texto)
+                resumen_general += resumen_texto + "\n"
 
-    pdf.set_font("Arial", "B", 12)
-    pdf.ln(10)
-    pdf.cell(0, 10, "Resumen Final", ln=True)
-    pdf.set_font("Arial", "", 11)
-    pdf.cell(0, 8, f"Total de fichas procesadas: {total_fichas}", ln=True)
-    pdf.cell(0, 8, f"Total de aprendices incluidos: {total_aprendices}", ln=True)
+            # PDF general
+            pdf_general = FPDF()
+            pdf_general.add_page()
+            logo_path = "logo_sena.png"
+            if os.path.exists(logo_path):
+                pdf_general.image(logo_path, x=10, y=8, w=30)
+            pdf_general.set_xy(0, 35)
+            pdf_general.set_font("Arial", "B", 14)
+            pdf_general.cell(0, 10, "Reporte General de Cancelaciones", ln=True, align="C")
+            pdf_general.set_font("Arial", "", 11)
+            pdf_general.multi_cell(0, 10, resumen_general)
+            pdf_general.cell(0, 10, f"Total de fichas: {len(agrupado)}", ln=True)
+            pdf_general.cell(0, 10, f"Total de aprendices: {total_aprendices}", ln=True)
 
-    pdf.output(archivo_reporte_general)
+            pdf_general_bytes = pdf_general.output(dest='S').encode('latin1')
+            zip_file.writestr("documentos_pdf/reporte_general.pdf", pdf_general_bytes)
 
-    return archivo_reporte_general
+        for path in temp_files:
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+
+        zip_buffer.seek(0)
+        st.success("✅ Documentos generados correctamente.")
+        st.download_button(
+            label="📥 Descargar carpeta ZIP con todos los documentos",
+            data=zip_buffer,
+            file_name="cancelaciones.zip",
+            mime="application/zip"
+        )
+
+    if st.button("⬅️ Volver al menú principal"):
+        st.session_state.modulo_seleccionado = None
+        st.rerun()
