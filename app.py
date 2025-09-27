@@ -128,10 +128,10 @@ if st.button("Generar documentos"):
             # Activar el botón de reinicio
             st.session_state["mostrar_reinicio"] = True
 
-# 🔄 Botón para reiniciar la app
+# 🔄 Botón para reiniciar la app sin errores
 if st.session_state["mostrar_reinicio"]:
     st.markdown("---")
     st.markdown("¿Deseas generar otra carga?")
     if st.button("🔄 Nueva carga"):
-        st.session_state["mostrar_reinicio"] = False
-        st.experimental_rerun()
+        st.session_state.clear()
+        st.success("✅ Listo para una nueva carga. Vuelve a subir los archivos.")
