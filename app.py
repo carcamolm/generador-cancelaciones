@@ -10,6 +10,10 @@ import os
 st.set_page_config(page_title="Generador de Cancelaciones", layout="centered")
 st.title("📄 Generador de Reportes de Cancelación")
 
+# Inicializar estado para mostrar el botón de reinicio
+if "mostrar_reinicio" not in st.session_state:
+    st.session_state["mostrar_reinicio"] = False
+
 # 📘 Botón para descargar instructivo
 st.markdown("¿Primera vez usando la herramienta? Descarga el instructivo institucional aquí:")
 try:
@@ -32,9 +36,7 @@ st.subheader("🖼️ Paso 2: Cargar evidencias en imagen")
 uploaded_images = st.file_uploader("Imágenes (.png, .jpg)", type=["png", "jpg"], accept_multiple_files=True)
 
 # 🔄 Generación de documentos
-generar = st.button("Generar documentos")
-
-if generar:
+if st.button("Generar documentos"):
     if not excel_file or not uploaded_images:
         st.error("❗ Debes subir el Excel y al menos una imagen.")
     else:
@@ -123,8 +125,13 @@ if generar:
                 mime="application/zip"
             )
 
-            # 🔄 Botón para reiniciar la app
-            st.markdown("---")
-            st.markdown("¿Deseas generar otra carga?")
-            if st.button("🔄 Nueva carga"):
-                st.experimental_rerun()
+            # Activar el botón de reinicio
+            st.session_state["mostrar_reinicio"] = True
+
+# 🔄 Botón para reiniciar la app
+if st.session_state["mostrar_reinicio"]:
+    st.markdown("---")
+    st.markdown("¿Deseas generar otra carga?")
+    if st.button("🔄 Nueva carga"):
+        st.session_state["mostrar_reinicio"] = False
+        st.experimental_rerun()
