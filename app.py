@@ -146,7 +146,7 @@ elif st.session_state.modulo_seleccionado == "aprendices":
                 mime="application/pdf"
             )
     except FileNotFoundError:
-        st.info(ℹ️ El instructivo no se encuentra disponible.")
+        st.info("ℹ️ El instructivo no se encuentra disponible.")
 
     st.subheader("📁 Paso 1: Cargar archivo Excel")
     excel_file = st.file_uploader("Archivo Excel (.xlsx)", type=["xlsx"], key="excel_aprendices")
