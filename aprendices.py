@@ -30,25 +30,26 @@ def generar_documentos(excel_path, carpeta_imagenes):
         raise FileNotFoundError(f"Faltan evidencias: {faltantes}")
 
     # Generar documentos Word
-    for index, row in df.iterrows():
-        nombre = row["Nombre"]
-        ficha = str(row["Ficha"])
-        evidencia = row["Evidencia"]
+    # Generar documentos Word
+for index, row in df.iterrows():
+    nombre = row["Nombre"]
+    ficha = str(row["Ficha"])
+    evidencia = row["Evidencia"]
 
-        subcarpeta_word = os.path.join(carpeta_word, ficha)
-        subcarpeta_pdf = os.path.join(carpeta_pdf, ficha)
-        os.makedirs(subcarpeta_word, exist_ok=True)
-        os.makedirs(subcarpeta_pdf, exist_ok=True)
+    subcarpeta_word = os.path.join(carpeta_word, ficha)
+    subcarpeta_pdf = os.path.join(carpeta_pdf, ficha)
+    os.makedirs(subcarpeta_word, exist_ok=True)
+    os.makedirs(subcarpeta_pdf, exist_ok=True)
 
-        nombre_archivo_base = f"{ficha}_{nombre.replace(' ', '_')}"
-        ruta_docx = os.path.join(subcarpeta_word, f"{nombre_archivo_base}.docx")
+    nombre_archivo_base = f"EVIDENCIAS_DESERCIÓN_{nombre.replace(' ', '_')}_"
+    ruta_docx = os.path.join(subcarpeta_word, f"{nombre_archivo_base}.docx")
 
-        doc = Document()
-        doc.add_paragraph(f"FICHA: {ficha}")
-        doc.add_paragraph(f"APRENDIZ:  {nombre}")
-        doc.add_paragraph("EVIDENCIA CORREO")
-        doc.add_picture(evidencia, width=Inches(5))
-        doc.save(ruta_docx)
+    doc = Document()
+    doc.add_paragraph(f"FICHA: {ficha}")
+    doc.add_paragraph(f"APRENDIZ:  {nombre}")
+    doc.add_paragraph("EVIDENCIA CORREO")
+    doc.add_picture(evidencia, width=Inches(5))
+    doc.save(ruta_docx)
 
     # Convertir a PDF
     for ficha in df["Ficha"].astype(str).unique():

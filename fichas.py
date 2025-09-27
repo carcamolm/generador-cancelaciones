@@ -43,6 +43,8 @@ def crear_pdf_aprendiz(nombre, ficha, imagen_evidencia, ruta_pdf):
 
 # === GENERACIÓN DE PDFs INDIVIDUALES AGRUPADOS POR FICHA ===
 
+# === GENERACIÓN DE PDFs INDIVIDUALES AGRUPADOS POR FICHA ===
+
 for index, row in df.iterrows():
     nombre = row["Nombre"]
     ficha = str(row["Ficha"])
@@ -51,7 +53,7 @@ for index, row in df.iterrows():
     carpeta_ficha = os.path.join(carpeta_pdf, ficha)
     os.makedirs(carpeta_ficha, exist_ok=True)
 
-    nombre_archivo = f"{ficha}_{nombre.replace(' ', '_')}.pdf"
+    nombre_archivo = f"EVIDENCIAS_DESERCIÓN_{nombre.replace(' ', '_')}_.pdf"
     ruta_pdf = os.path.join(carpeta_ficha, nombre_archivo)
 
     crear_pdf_aprendiz(nombre, ficha, imagen_evidencia, ruta_pdf)
