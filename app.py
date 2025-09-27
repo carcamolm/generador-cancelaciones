@@ -14,7 +14,7 @@ st.title("📄 Generador de Reportes de Cancelación")
 if "estado_app" not in st.session_state:
     st.session_state.estado_app = "inicio"
 
-# Mostrar interfaz solo si estamos en estado inicial
+# Mostrar interfaz principal solo si estamos en estado inicial
 if st.session_state.estado_app == "inicio":
 
     # 📘 Botón para descargar instructivo
@@ -128,14 +128,13 @@ if st.session_state.estado_app == "inicio":
                     mime="application/zip"
                 )
 
-                # Activar reinicio visual
+                # Cambiar estado para mostrar botón de nueva carga
                 st.session_state.estado_app = "reinicio"
-                st.experimental_rerun()
 
 # 🔄 Interfaz de reinicio
 if st.session_state.estado_app == "reinicio":
     st.markdown("---")
     st.markdown("¿Deseas generar una nueva carga?")
     if st.button("🔄 Nueva carga"):
-        st.session_state.estado_app = "inicio"
-        st.experimental_rerun()
+        st.session_state.clear()
+        st.markdown("✅ Listo para una nueva carga. Vuelve a subir los archivos.")
